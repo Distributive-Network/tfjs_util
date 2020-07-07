@@ -1,0 +1,17 @@
+{
+  "name": "tfjs_utils",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tensorflow/tfjs": "^2.0.1",
+    "@tensorflow/tfjs-node": "^2.0.1",
+    "data_serializer": "file:../dcp-data-serialize",
+    "yargs": "^15.4.0"
+  }
+}

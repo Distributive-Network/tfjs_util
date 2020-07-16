@@ -1,0 +1,240 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title> serializeModel.js</title>
+
+  <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="./build/entry.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,400,700|Inconsolata,700" rel="stylesheet">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+  <link type="text/css" rel="stylesheet" href="https://jmblog.github.io/color-themes-for-google-code-prettify/themes/tomorrow-night.min.css">
+  <link type="text/css" rel="stylesheet" href="styles/app.min.css">
+  <link type="text/css" rel="stylesheet" href="styles/iframe.css">
+  <link type="text/css" rel="stylesheet" href="">
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+
+  
+</head>
+
+
+
+<body class="layout small-header">
+    <div id="stickyNavbarOverlay"></div>
+    
+
+<div class="top-nav">
+    <div class="inner">
+        <a id="hamburger" role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+        <div class="logo">
+            
+            
+        </div>
+        <div class="menu">
+            
+            <div class="navigation">
+                <a
+                    href="index.html"
+                    class="link"
+                >
+                    API Documentation
+                </a>
+                
+                
+                
+            </div>
+        </div>
+    </div>
+</div>
+    <div id="main">
+        <div
+            class="sidebar "
+            id="sidebarNav"
+        >
+            
+            <nav>
+                
+                    <h2><a href="index.html">Documentation</a></h2><div class="category"><h3>Global</h3><ul><li><a href="global.html#abtostr">abtostr</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#sizeof">sizeof</a></li><li><a href="global.html#strtoab">strtoab</a></li></ul></div>
+                
+            </nav>
+        </div>
+        <div class="core" id="main-content-wrapper">
+            <div class="content">
+                <header class="page-title">
+                    <p>Source</p>
+                    <h1>serializeModel.js</h1>
+                </header>
+                
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const fs = require('fs');
+const _sizeof = require('object-sizeof');
+const tfn = require('@tensorflow/tfjs-node');
+const tf = require('@tensorflow/tfjs');
+const atob = require('atob');
+const btoa = require('btoa');
+
+/**
+ * sizeof Gives the size of an object in MB.
+ *
+ * @param {object} - The object to measure the size of. 
+ * @returns {undefined}
+ */
+function sizeof(b){
+  return _sizeof(b)/1e6;
+};
+
+const argv = require('yargs').option(
+    'd', {
+          alias: 'dcp',
+          describe: 'dcpify output file script?',
+          type: 'boolean'
+        })
+  .alias('i','input')
+  .describe('i','input file for model')
+  .nargs('i',1)
+  .alias('o','output')
+  .describe('o','output file for script')
+  .nargs('o',1)
+  .demand('o')
+  .argv;
+
+
+/**
+ * abtostr Turns an array buffer into a string.
+ *
+ * @param {ArrayBuffer} ab - The array buffer to serialize.
+ * @returns {string} -  The serialized array buffer.
+ */
+function abtostr(ab){
+  let binary = '';
+  var ui8 = new Uint8Array(ab)
+  const mss = 9999 //This is the _vm_fun_maxargs from serialize.js
+  let segments = [];
+  let s = '';
+  for (let i = 0; i&lt;ui8.length/mss;i++){
+    segments.push(String.fromCharCode.apply(null, ui8.slice(i * mss, (i+1) * mss))); 
+  };
+  s = segments.join('');
+  return btoa(s);
+};
+
+/**
+ * strtoab  Turns a string to an array buffer
+ *
+ * @param {string} str - The string to serialize
+ * @returns {ArrayBuffer} - The array buffer.
+ */
+function strtoab(str){
+  let strin = atob(str);
+  var binaryArray = new Uint8Array(strin.length);
+  for (let i = 0; i &lt; strin.length; ++i){
+    binaryArray[i] = strin.charCodeAt(i);
+  };
+  return binaryArray.buffer;
+};
+
+
+/**
+ * main   The main function which runs the serialization of the model
+ *        into a script.
+ *
+ * @returns {undefined}
+ */
+async function main(){
+  const modelPath = argv.i;
+  const outputPath = argv.o;
+
+  const modelArtifacts = await tfn.io.fileSystem(modelPath).load();
+
+  modelArtifacts.weightData = abtostr(modelArtifacts.weightData);
+  
+  const modelSerial = JSON.stringify(modelArtifacts);
+
+  let strtoabSTRING = strtoab.toString();
+  let outString =`let tf = require('@tensorflow/tfjs');\n`;
+  if (argv.d){
+    outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
+  }
+  outString    +=`let modelSerial = \`${modelSerial}\`;\n\n`;
+  outString    +=`\n${strtoabSTRING}\n\n`;
+  outString    +=`async function getModel(){
+  let modelArtifacts = JSON.parse(modelSerial);
+  const weightData = strtoab(modelArtifacts.weightData);
+  modelArtifacts.weightData = weightData;
+
+  var model;
+  try{
+    model = await tf.loadLayersModel( tf.io.fromMemory(modelArtifacts) );
+  }catch(err1){
+    try{
+      model = await tf.loadGraphModel( tf.io.fromMemory(modelArtifacts) );
+    }catch(err2){
+      throw err1 + err2;
+    };
+  };
+  return model;
+};\n\n`;
+
+  outString    +=`exports.getModel = getModel;\n\n`;
+  
+  if (argv.d){
+    outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['tensorflowdcp/tfjs'], function(require, exports, module) {\n` + outString;
+    outString+= `});//this concludes module definition\n`;
+  };
+
+  fs.writeFileSync(outputPath, outString,'utf8');
+};
+
+
+
+
+
+main().then(()=>{console.log("Done")}).catch((err)=>{console.error(err)});
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+            </div>
+            
+            <footer class="footer">
+                <div class="content has-text-centered">
+                    <p>Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.4</a></p>
+                    <p class="sidebar-created-by">
+                        <a href="https://github.com/SoftwareBrothers/better-docs" target="_blank">BetterDocs theme</a> provided with <i class="fas fa-heart"></i> by 
+                        <a href="http://softwarebrothers.co" target="_blank">SoftwareBrothers - JavaScript Development Agency</a>
+                    </p>
+                </div>
+            </footer>
+            
+        </div>
+        <div id="side-nav" class="side-nav">
+        </div>
+    </div>
+<script src="scripts/app.min.js"></script>
+<script>PR.prettyPrint();</script>
+<script src="scripts/linenumber.js"> </script>
+
+</body>
+</html>

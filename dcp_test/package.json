@@ -1,0 +1,17 @@
+{
+  "name": "dcp_test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tensorflow/tfjs": "^2.0.1",
+    "atob": "^2.1.2",
+    "bravojs": "^1.0.15",
+    "dcp-client": "^3.1.4"
+  }
+}

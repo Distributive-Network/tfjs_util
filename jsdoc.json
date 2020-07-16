@@ -1,0 +1,17 @@
+{
+    "source": {
+        "include": ["./src/serializeModel.js"],
+        "excludePattern": "(node_modules/|public)"
+    },
+    "plugins": [
+        "plugins/markdown"
+    ],
+    "opts": {
+        "encoding": "utf8", 
+        "destination": "public/",
+        "readme": "./README.md",
+        "recurse": true,
+        "verbose": true,
+        "template" : "node_modules/better-docs"
+    }
+}

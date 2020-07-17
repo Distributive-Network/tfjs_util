@@ -12,12 +12,44 @@ const dcpCli = require('dcp/dcp-cli');
 const argv = dcpCli.base([
   '\x1b[33mThis application serializes tfjs model.json\'s into files which can be used in a dcp environment. It is also able to upload it to a DCP package manager.\x1b[37m'
 ].join('\n'))
-  .command(['$0 inputModel', '' /* This empty alias is required for --show-hidden to work /sigh */], '', yargs => {
-    yargs.positional('inputModel', {
-      describe: 'Path to the python Model to 
-    });
-  })
-  .options({ 
+  .options({
+    source: {
+      describe: 'Input model to serialize.',
+      type: 'string',
+      default: './model.json',
+      alias: 's'
+    },
+    output: {
+      describe: 'Output location or path name for the serialized file.',
+      type: 'string',
+      default: 'test/test.js',
+      alias: 'o'
+    },
+    input_format: {
+      describe: 'The input format for the model.',
+      type: 'string',
+      default: 'tf_frozen_model'
+      alias: 'if'
+    },
+    output_format: {
+      describe: 'Output format. Default: tfjs_graph_model.',
+      type: 'string',
+      default: 'tfjs_graph_model',
+      alias: 'of'
+    },
+    signature_name: {
+	describe: 'Signature of the savedmodel graph or TF-Hub module to load. Applicable only if input format is tf_hub or tf_saved_model.',
+	type: 'string',
+	default: '',
+	alias: 'sn',
+    },
+    saved_model_tags: 
+    	describe: 'Tags of the MetaGraphDef to load, in a comma separated string format. Defaults to server. Applicable only if input format is tf_saved_model',
+	default: '',
+	alias: 'smt'
+    },
+    quantize_float16:
+	describe: '
     dcpify: {
       describe: 'Publish and dcpify?',
       type: 'boolean',

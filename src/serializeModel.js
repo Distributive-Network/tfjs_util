@@ -17,39 +17,67 @@ const argv = dcpCli.base([
       describe: 'Input model to serialize.',
       type: 'string',
       default: './model.json',
-      alias: 's'
     },
     output: {
       describe: 'Output location or path name for the serialized file.',
       type: 'string',
       default: 'test/test.js',
-      alias: 'o'
     },
     input_format: {
       describe: 'The input format for the model.',
       type: 'string',
-      default: 'tf_frozen_model'
-      alias: 'if'
+      default: 'tf_frozen_model',
     },
     output_format: {
       describe: 'Output format. Default: tfjs_graph_model.',
       type: 'string',
       default: 'tfjs_graph_model',
-      alias: 'of'
     },
     signature_name: {
-	describe: 'Signature of the savedmodel graph or TF-Hub module to load. Applicable only if input format is tf_hub or tf_saved_model.',
-	type: 'string',
-	default: '',
-	alias: 'sn',
+	    describe: 'Signature of the savedmodel graph or TF-Hub module to load. Applicable only if input format is tf_hub or tf_saved_model.',
+      type: 'string',
+      default: '',
     },
-    saved_model_tags: 
-    	describe: 'Tags of the MetaGraphDef to load, in a comma separated string format. Defaults to server. Applicable only if input format is tf_saved_model',
-	default: '',
-	alias: 'smt'
+    saved_model_tags: {
+      describe: 'Tags of the MetaGraphDef to load, in a comma separated string format. Defaults to server. Applicable only if input format is tf_saved_model',
+	    default: '',
+      type: 'string',
     },
-    quantize_float16:
-	describe: '
+    quantize_float16: {
+      describe: 'Comma separated list of node names to apply float16 quantization. Same as tensorflowjs_convert command',
+      default: '',
+      type: 'string',
+    },
+    quantize_uint8: {
+      describe: 'Comma separated list of node names to apply uint8 quantization. Same as tensorflowjs_convert command',
+      default: '',
+      type: 'string',
+    },
+    quantize_uint16: {
+      describe: 'Comma separated list of node names to apply uint16 quantization. Same as tensorflowjs_convert command',
+      default: '',
+      type: 'string',
+    },
+    quantization_bytes: {
+      describe: '(Deprecated) How many bytes to optionally quantize/compress the weights to. 1- and 2-byte quantization is supported. The default (unquantized) size is 4 bytes.',
+      default: '4',
+      type: 'string',
+    },
+    strip_debug_ops: {
+      describe: 'Strip debug ops? (Print assert, checknumerics)',
+      default: true,
+      type: 'boolean',
+    },
+    output_node_names: {
+      describe: 'The names of the output nodes, separated by commas. E.g., "Logits, activations". Applicable only if input format is "tf_frozen_model"',
+      type: "string",
+      default: "",
+    },
+    control_flow_v2: {
+      describe: "Enable control flow v2 ops, this would improve performance on models with branches or loops.",
+      type: "boolean",
+      default: false,
+    },
     dcpify: {
       describe: 'Publish and dcpify?',
       type: 'boolean',
@@ -110,8 +138,8 @@ function strtoab(str){
  * @returns {undefined}
  */
 async function main(){
-  const modelPath = argv.i;
-  const outputPath = argv.o;
+  const modelPath = argv.source;
+  const outputPath = argv.output;
   const dcpify     = argv.d;
 
   const modelArtifacts = await tfn.io.fileSystem(modelPath).load();

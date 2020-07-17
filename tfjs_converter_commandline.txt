@@ -1,14 +1,18 @@
 usage: TensorFlow.js model converters. [-h]
-                                       [--input_format {tf_frozen_model,keras,tf_hub,tf_saved_model,keras_saved_model,tfjs_layers_model}]
-                                       [--output_format {keras,keras_saved_model,tfjs_graph_model,tfjs_layers_model}]
+                                       [--input_format {tf_frozen_model,keras_saved_model,tf_saved_model,tfjs_layers_model,tf_hub,keras}]
+                                       [--output_format {tfjs_graph_model,tfjs_layers_model,keras,keras_saved_model}]
                                        [--signature_name SIGNATURE_NAME]
                                        [--saved_model_tags SAVED_MODEL_TAGS]
+                                       [--quantize_float16 [QUANTIZE_FLOAT16]]
+                                       [--quantize_uint8 [QUANTIZE_UINT8]]
+                                       [--quantize_uint16 [QUANTIZE_UINT16]]
                                        [--quantization_bytes {1,2}]
                                        [--split_weights_by_layer] [--version]
                                        [--skip_op_check]
                                        [--strip_debug_ops STRIP_DEBUG_OPS]
                                        [--weight_shard_size_bytes WEIGHT_SHARD_SIZE_BYTES]
                                        [--output_node_names OUTPUT_NODE_NAMES]
+                                       [--control_flow_v2 CONTROL_FLOW_V2]
                                        [input_path] [output_path]
 
 positional arguments:
@@ -20,7 +24,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input_format {tf_frozen_model,keras,tf_hub,tf_saved_model,keras_saved_model,tfjs_layers_model}
+  --input_format {tf_frozen_model,keras_saved_model,tf_saved_model,tfjs_layers_model,tf_hub,keras}
                         Input format. For "keras", the input path can be one
                         of the two following formats: - A topology+weights
                         combined HDF5 (e.g., generated with
@@ -35,7 +39,7 @@ optional arguments:
                         is usually named as a Unix epoch time (e.g.,
                         1542212752). For "tf" formats, a SavedModel, frozen
                         model, or TF-Hub module is expected.
-  --output_format {keras,keras_saved_model,tfjs_graph_model,tfjs_layers_model}
+  --output_format {tfjs_graph_model,tfjs_layers_model,keras,keras_saved_model}
                         Output format. Default: tfjs_graph_model.
   --signature_name SIGNATURE_NAME
                         Signature of the SavedModel Graph or TF-Hub module to
@@ -45,10 +49,29 @@ optional arguments:
                         Tags of the MetaGraphDef to load, in comma separated
                         string format. Defaults to "serve". Applicable only if
                         input format is "tf_saved_model".
+  --quantize_float16 [QUANTIZE_FLOAT16]
+                        Comma separated list of node names to apply float16
+                        quantization. You can also use wildcard symbol (*) to
+                        apply quantization to multiple nodes (e.g.,
+                        conv/*/weights). When the flag is provided without any
+                        nodes the default behavior will match all nodes.
+  --quantize_uint8 [QUANTIZE_UINT8]
+                        Comma separated list of node names to apply 1-byte
+                        affine quantization. You can also use wildcard symbol
+                        (*) to apply quantization to multiple nodes (e.g.,
+                        conv/*/weights). When the flag is provided without any
+                        nodes the default behavior will match all nodes.
+  --quantize_uint16 [QUANTIZE_UINT16]
+                        Comma separated list of node names to apply 2-byte
+                        affine quantization. You can also use wildcard symbol
+                        (*) to apply quantization to multiple nodes (e.g.,
+                        conv/*/weights). When the flag is provided without any
+                        nodes the default behavior will match all nodes.
   --quantization_bytes {1,2}
-                        How many bytes to optionally quantize/compress the
-                        weights to. 1- and 2-byte quantizaton is supported.
-                        The default (unquantized) size is 4 bytes.
+                        (Deprecated) How many bytes to optionally
+                        quantize/compress the weights to. 1- and 2-byte
+                        quantizaton is supported. The default (unquantized)
+                        size is 4 bytes.
   --split_weights_by_layer
                         Applicable to keras input_format only: Whether the
                         weights from different layers are to be stored in
@@ -67,3 +90,7 @@ optional arguments:
                         The names of the output nodes, separated by commas.
                         E.g., "logits,activations". Applicable only if input
                         format is "tf_frozen_model".
+  --control_flow_v2 CONTROL_FLOW_V2
+                        Enable control flow v2 ops, this would improve
+                        inference performance on models with branches or
+                        loops.

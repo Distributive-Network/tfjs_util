@@ -4,7 +4,8 @@
   "description": "",
   "main": "./src/index.js",
   "scripts": {
-    "docs": "./node_modules/.bin/jsdoc -c ./jsdoc.json"
+    "docs": "./node_modules/.bin/jsdoc -c ./jsdoc.json",
+    "preinstall": "python3 -m pip install --upgrade pip && python3 -m pip install tensorflowjs"
   },
   "author": "",
   "license": "ISC",

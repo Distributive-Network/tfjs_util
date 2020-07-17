@@ -12,19 +12,12 @@ const dcpCli = require('dcp/dcp-cli');
 const argv = dcpCli.base([
   '\x1b[33mThis application serializes tfjs model.json\'s into files which can be used in a dcp environment. It is also able to upload it to a DCP package manager.\x1b[37m'
 ].join('\n'))
-  .options({
-    input: {
-      describe: 'Input model.json to serialize.',
-      type: 'string',
-      default: './model.json',
-      alias: 'i'
-    },
-    output: {
-      describe: 'Output location or path name for the serialized file.',
-      type: 'string',
-      default: 'test/test.js',
-      alias: 'o'
-    },
+  .command(['$0 inputModel', '' /* This empty alias is required for --show-hidden to work /sigh */], '', yargs => {
+    yargs.positional('inputModel', {
+      describe: 'Path to the python Model to 
+    });
+  })
+  .options({ 
     dcpify: {
       describe: 'Publish and dcpify?',
       type: 'boolean',

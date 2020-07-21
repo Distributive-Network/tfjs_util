@@ -13,16 +13,16 @@ const argv = dcpCli.base([
   '\x1b[33mThis application serializes tfjs model.json\'s into files which can be used in a dcp environment. It is also able to upload it to a DCP package manager.\x1b[37m'
 ].join('\n'))
   .options({
-    input: {
+    model: {
       describe: 'Input model.json to serialize.',
       type: 'string',
-      default: './model.json',
-      alias: 'i'
+      demand: true,
+      alias: 'm'
     },
     output: {
-      describe: 'Output location or path name for the serialized file.',
+      describe: 'If the dcpify flag is set, this is the packagename/filename where the model will be published on DCP. If the dcpify flag is not set, this is the path where the serialized model will be written.',
       type: 'string',
-      default: 'test/test.js',
+      demand: true,
       alias: 'o'
     },
     dcpify: {
@@ -85,7 +85,7 @@ function strtoab(str){
  * @returns {undefined}
  */
 async function main(){
-  const modelPath = argv.i;
+  const modelPath = argv.m;
   const outputPath = argv.o;
   const dcpify     = argv.d;
 
@@ -98,7 +98,7 @@ async function main(){
   let strtoabSTRING = strtoab.toString();
   let outString =`let tf = require('@tensorflow/tfjs');\n`;
   if (argv.d){
-    outString =`let tf = require('tensorflow/tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
+    outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
   }
   outString    +=`let modelSerial = \`${modelSerial}\`;\n\n`;
   outString    +=`\n${strtoabSTRING}\n\n`;
@@ -123,7 +123,7 @@ async function main(){
   outString    +=`exports.getModel = getModel;\n\n`;
   
   if (argv.d){
-    outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['tensorflowdcp/tfjs'], function(require, exports, module) {\n` + outString;
+    outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['aistensorflow/tfjs'], function(require, exports, module) {\n` + outString;
     outString+= `});//this concludes module definition\n`;
 
     let tempFileName = require('crypto').randomBytes(64).toString('hex') + '.js';

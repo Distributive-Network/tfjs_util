@@ -29,17 +29,16 @@ async function main(){
     progress(0.01);
     console.log("Beginning require with index: ", sim_id);
     try{
-      var tf = require('@tensorflow/tfjs');
+      var tf = require('tfjs');
       var { getModel } = require('prestriate');
       progress(0.5);
       console.log(tf.version);
       let model = await getModel();
+
       progress(0.6);
-      model.summary();
-      let t = model.predict(tf.randomNormal([1,416,416,3]));
+      let t = model.predict(tf.randomNormal([1,416,416,3]))
       progress(0.7);
       console.log(t);
-
     }catch(err){
       console.log(err);
     }
@@ -73,7 +72,7 @@ async function main(){
     console.log(Output);
   });
 
-  job.requires('@tensorflow/tfjs');
+  job.requires('aistensorflow/tfjs');
   job.requires('aisight/prestriate');
   job.public.name = 'DCP-tfjs_utils-Test';
   await job.exec(compute.marketValue, accountKeystore);

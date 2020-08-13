@@ -4,6 +4,7 @@
   "description": "This tool is a tensorflowjs utility tool for publishing tensorlfow js models onto DCP.",
   "main": "./src/index.js",
   "scripts": {
+    "build": "cp ./src/serializeModel.js ./bin/serializeModel.js && chmod +x ./bin/serializeModel.js",
     "docs": "./node_modules/.bin/jsdoc -c ./jsdoc.json"
   },
   "author": "Hamada Gasmallah",

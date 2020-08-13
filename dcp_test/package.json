@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@tensorflow/tfjs": "^2.0.1",
+    "@tensorflow/tfjs-node": "^2.1.0",
     "atob": "^2.1.2",
     "bravojs": "^1.0.15",
     "dcp-client": "^3.1.4"

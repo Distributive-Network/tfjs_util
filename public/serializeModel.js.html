@@ -68,7 +68,7 @@
             
             <nav>
                 
-                    <h2><a href="index.html">Documentation</a></h2><div class="category"><h3>Global</h3><ul><li><a href="global.html#abtostr">abtostr</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#sizeof">sizeof</a></li><li><a href="global.html#strtoab">strtoab</a></li></ul></div>
+                    <h2><a href="index.html">Documentation</a></h2><div class="category"><h3>Global</h3><ul><li><a href="global.html#_atob">_atob</a></li><li><a href="global.html#abtostr">abtostr</a></li><li><a href="global.html#main">main</a></li><li><a href="global.html#sizeof">sizeof</a></li><li><a href="global.html#strtoab">strtoab</a></li></ul></div>
                 
             </nav>
         </div>
@@ -85,12 +85,91 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>const fs = require('fs');
+            <pre class="prettyprint source linenums"><code>#!/usr/bin/env node
+const assert = require('assert');
+const path = require('path');
+const fs = require('fs');
 const _sizeof = require('object-sizeof');
 const tfn = require('@tensorflow/tfjs-node');
 const tf = require('@tensorflow/tfjs');
-const atob = require('atob');
 const btoa = require('btoa');
+require('dcp-client').initSync(process.argv);
+const dcpCli = require('dcp/dcp-cli');
+
+const argv = dcpCli.base([
+  '\x1b[33mThis application serializes tfjs model.json\'s into files which can be used in a dcp environment. It is also able to upload it to a DCP package manager.\x1b[37m'
+].join('\n'))
+  .options({
+    model: {
+      describe: 'Input model.json to serialize.',
+      type: 'string',
+      demand: true,
+      alias: 'm'
+    },
+    packageVersion: {
+      describe: 'Version number to upload package with',
+      type: 'string',
+      demand: false,
+      alias: 'p',
+      default: '1.0.0'
+    },
+    output: {
+      describe: 'If the dcpify flag is set, this is the packagename/filename where the model will be published on DCP. If the dcpify flag is not set, this is the path where the serialized model will be written.',
+      type: 'string',
+      demand: true,
+      alias: 'o'
+    },
+    dcpify: {
+      describe: 'Publish and dcpify?',
+      type: 'boolean',
+      default: false,
+      alias: 'd'
+    }
+  }).argv;
+
+
+
+
+
+
+
+
+/**
+ * _atob  A polyfill for atob
+ *
+ * @param string
+ * @returns {string}
+ */
+function _atob (string) {
+  var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  string = String(string).replace(/[\t\n\f\r ]+/g, ""); 
+  // Adding the padding if missing, for semplicity
+  string += "==".slice(2 - (string.length &amp; 3));
+  var bitmap, result = "", r1, r2, i = 0;
+  for (; i &lt; string.length;) {
+    bitmap = b64.indexOf(string.charAt(i++)) &lt;&lt; 18 | b64.indexOf(string.charAt(i++)) &lt;&lt; 12
+            | (r1 = b64.indexOf(string.charAt(i++))) &lt;&lt; 6 | (r2 = b64.indexOf(string.charAt(i++)));
+
+    result += r1 === 64 ? String.fromCharCode(bitmap >> 16 &amp; 255)
+            : r2 === 64 ? String.fromCharCode(bitmap >> 16 &amp; 255, bitmap >> 8 &amp; 255)
+            : String.fromCharCode(bitmap >> 16 &amp; 255, bitmap >> 8 &amp; 255, bitmap &amp; 255);
+  }
+  return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * sizeof Gives the size of an object in MB.
@@ -102,22 +181,6 @@ function sizeof(b){
   return _sizeof(b)/1e6;
 };
 
-const argv = require('yargs').option(
-    'd', {
-          alias: 'dcp',
-          describe: 'dcpify output file script?',
-          type: 'boolean'
-        })
-  .alias('i','input')
-  .describe('i','input file for model')
-  .nargs('i',1)
-  .alias('o','output')
-  .describe('o','output file for script')
-  .nargs('o',1)
-  .demand('o')
-  .argv;
-
-
 /**
  * abtostr Turns an array buffer into a string.
  *
@@ -126,7 +189,7 @@ const argv = require('yargs').option(
  */
 function abtostr(ab){
   let binary = '';
-  var ui8 = new Uint8Array(ab)
+  var ui8 = new Uint8Array(ab);
   const mss = 9999 //This is the _vm_fun_maxargs from serialize.js
   let segments = [];
   let s = '';
@@ -144,7 +207,7 @@ function abtostr(ab){
  * @returns {ArrayBuffer} - The array buffer.
  */
 function strtoab(str){
-  let strin = atob(str);
+  let strin = _atob(str);
   var binaryArray = new Uint8Array(strin.length);
   for (let i = 0; i &lt; strin.length; ++i){
     binaryArray[i] = strin.charCodeAt(i);
@@ -160,21 +223,23 @@ function strtoab(str){
  * @returns {undefined}
  */
 async function main(){
-  const modelPath = argv.i;
+  const modelPath = argv.m;
   const outputPath = argv.o;
+  const dcpify     = argv.d;
 
   const modelArtifacts = await tfn.io.fileSystem(modelPath).load();
 
   modelArtifacts.weightData = abtostr(modelArtifacts.weightData);
   
   const modelSerial = JSON.stringify(modelArtifacts);
-
+  let _atobSTRING   = _atob.toString();
   let strtoabSTRING = strtoab.toString();
   let outString =`let tf = require('@tensorflow/tfjs');\n`;
   if (argv.d){
     outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
   }
   outString    +=`let modelSerial = \`${modelSerial}\`;\n\n`;
+  outString    +=`\n${_atobSTRING}\n\n`;
   outString    +=`\n${strtoabSTRING}\n\n`;
   outString    +=`async function getModel(){
   let modelArtifacts = JSON.parse(modelSerial);
@@ -197,15 +262,33 @@ async function main(){
   outString    +=`exports.getModel = getModel;\n\n`;
   
   if (argv.d){
-    outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['tensorflowdcp/tfjs'], function(require, exports, module) {\n` + outString;
+    outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['aistensorflow/tfjs'], function(require, exports, module) {\n` + outString;
     outString+= `});//this concludes module definition\n`;
+
+    let tempFileName = require('crypto').randomBytes(64).toString('hex') + '.js';
+    let tempFilePath = '/tmp/' + tempFileName;
+
+    fs.writeFileSync(tempFilePath, outString);
+    let pkgInfo = outputPath.split('/');
+    assert(pkgInfo.length &lt; 3);
+    let packageName = pkgInfo[0];
+    let packageFile = pkgInfo[1];
+   
+    let pkg = {
+      name: `${packageName}`,
+      version: argv.p,
+      files: {}
+    };
+
+    pkg.files[tempFilePath] = packageFile; 
+
+    await require('dcp/publish').publish(Object.assign({}, pkg));
+    console.log("Module published at : ", pkg.name + '/' + pkg.files[tempFilePath]);
+    fs.unlinkSync(tempFilePath);  
+  }else{
+    fs.writeFileSync(outputPath, outString,'utf8');
   };
-
-  fs.writeFileSync(outputPath, outString,'utf8');
 };
-
-
-
 
 
 main().then(()=>{console.log("Done")}).catch((err)=>{console.error(err)});
@@ -220,7 +303,7 @@ main().then(()=>{console.log("Done")}).catch((err)=>{console.error(err)});
             
             <footer class="footer">
                 <div class="content has-text-centered">
-                    <p>Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.4</a></p>
+                    <p>Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.5</a></p>
                     <p class="sidebar-created-by">
                         <a href="https://github.com/SoftwareBrothers/better-docs" target="_blank">BetterDocs theme</a> provided with <i class="fas fa-heart"></i> by 
                         <a href="http://softwarebrothers.co" target="_blank">SoftwareBrothers - JavaScript Development Agency</a>

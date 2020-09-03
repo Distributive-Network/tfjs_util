@@ -5,7 +5,6 @@ const fs = require('fs');
 const _sizeof = require('object-sizeof');
 const tfn = require('@tensorflow/tfjs-node');
 const tf = require('@tensorflow/tfjs');
-const atob = require('atob');
 const btoa = require('btoa');
 require('dcp-client').initSync(process.argv);
 const dcpCli = require('dcp/dcp-cli');
@@ -20,6 +19,13 @@ const argv = dcpCli.base([
       demand: true,
       alias: 'm'
     },
+    packageVersion: {
+      describe: 'Version number to upload package with',
+      type: 'string',
+      demand: false,
+      alias: 'p',
+      default: '1.0.0'
+    },
     output: {
       describe: 'If the dcpify flag is set, this is the packagename/filename where the model will be published on DCP. If the dcpify flag is not set, this is the path where the serialized model will be written.',
       type: 'string',
@@ -33,6 +39,50 @@ const argv = dcpCli.base([
       alias: 'd'
     }
   }).argv;
+
+
+
+
+
+
+
+
+/**
+ * _atob  A polyfill for atob
+ *
+ * @param string
+ * @returns {string}
+ */
+function _atob (string) {
+  var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  string = String(string).replace(/[\t\n\f\r ]+/g, ""); 
+  // Adding the padding if missing, for semplicity
+  string += "==".slice(2 - (string.length & 3));
+  var bitmap, result = "", r1, r2, i = 0;
+  for (; i < string.length;) {
+    bitmap = b64.indexOf(string.charAt(i++)) << 18 | b64.indexOf(string.charAt(i++)) << 12
+            | (r1 = b64.indexOf(string.charAt(i++))) << 6 | (r2 = b64.indexOf(string.charAt(i++)));
+
+    result += r1 === 64 ? String.fromCharCode(bitmap >> 16 & 255)
+            : r2 === 64 ? String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255)
+            : String.fromCharCode(bitmap >> 16 & 255, bitmap >> 8 & 255, bitmap & 255);
+  }
+  return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * sizeof Gives the size of an object in MB.
@@ -70,7 +120,7 @@ function abtostr(ab){
  * @returns {ArrayBuffer} - The array buffer.
  */
 function strtoab(str){
-  let strin = atob(str);
+  let strin = _atob(str);
   var binaryArray = new Uint8Array(strin.length);
   for (let i = 0; i < strin.length; ++i){
     binaryArray[i] = strin.charCodeAt(i);
@@ -95,13 +145,14 @@ async function main(){
   modelArtifacts.weightData = abtostr(modelArtifacts.weightData);
   
   const modelSerial = JSON.stringify(modelArtifacts);
-
+  let _atobSTRING   = _atob.toString();
   let strtoabSTRING = strtoab.toString();
   let outString =`let tf = require('@tensorflow/tfjs');\n`;
   if (argv.d){
     outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
   }
   outString    +=`let modelSerial = \`${modelSerial}\`;\n\n`;
+  outString    +=`\n${_atobSTRING}\n\n`;
   outString    +=`\n${strtoabSTRING}\n\n`;
   outString    +=`async function getModel(){
   let modelArtifacts = JSON.parse(modelSerial);
@@ -135,10 +186,10 @@ async function main(){
     assert(pkgInfo.length < 3);
     let packageName = pkgInfo[0];
     let packageFile = pkgInfo[1];
-    
+   
     let pkg = {
       name: `${packageName}`,
-      version: '1.0.0',
+      version: argv.p,
       files: {}
     };
 
@@ -146,7 +197,7 @@ async function main(){
 
     await require('dcp/publish').publish(Object.assign({}, pkg));
     console.log("Module published at : ", pkg.name + '/' + pkg.files[tempFilePath]);
-  
+    fs.unlinkSync(tempFilePath);  
   }else{
     fs.writeFileSync(outputPath, outString,'utf8');
   };

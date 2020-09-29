@@ -9,7 +9,7 @@
   "scripts": {
     "build": "cp ./src/serializeModel.js ./bin/serializeModel.js && chmod +x ./bin/serializeModel.js",
     "docs": "./node_modules/.bin/jsdoc -c ./jsdoc.json",
-    "install": "npm rebuild @tensorflow/tfjs-node --build-from-source"
+    "postinstall": "npm rebuild @tensorflow/tfjs-node --build-from-source"
   },
   "author": "Hamada Gasmallah",
   "license": "ISC",

@@ -2,7 +2,10 @@
   "name": "tfjs_utils",
   "version": "1.0.0",
   "description": "This tool is a tensorflowjs utility tool for publishing tensorlfow js models onto DCP.",
-  "main": "./src/index.js",
+  "main": "./bin/serializeModel.js",
+  "bin": {
+    "serializeModel": "./bin/serializeModel.js"
+  },
   "scripts": {
     "build": "cp ./src/serializeModel.js ./bin/serializeModel.js && chmod +x ./bin/serializeModel.js",
     "docs": "./node_modules/.bin/jsdoc -c ./jsdoc.json"
@@ -10,18 +13,18 @@
   "author": "Hamada Gasmallah",
   "license": "ISC",
   "dependencies": {
-    "@tensorflow/tfjs": "^2.1.0",
-    "@tensorflow/tfjs-node": "^2.1.0",
+    "@tensorflow/tfjs": "^2.3.0",
+    "@tensorflow/tfjs-node": "^2.3.0",
+    "@tensorflow/tfjs-node-gpu": "^2.4.0",
     "atob": "^2.1.2",
     "btoa": "^1.2.1",
-    "data_serializer": "file:../dcp-data-serialize",
-    "dcp-client": "^3.1.9",
+    "dcp-client": "^3.1.16",
     "lz4js": "^0.2.0",
     "object-sizeof": "^1.6.1",
     "yargs": "^15.4.1"
   },
   "devDependencies": {
-    "better-docs": "^2.3.0",
+    "better-docs": "^2.3.2",
     "deep-equal": "^2.0.3",
     "jsdoc": "^3.6.5"
   }

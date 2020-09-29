@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
@@ -37,11 +38,14 @@ const argv = dcpCli.base([
       type: 'boolean',
       default: false,
       alias: 'd'
-    }
+    },
+    onnx: {
+      describe: 'Specify that this is an onnx model',
+      type: 'boolean',
+      default: false,
+      alias: 'x'
+    },
   }).argv;
-
-
-
 
 
 
@@ -69,18 +73,6 @@ function _atob (string) {
   }
   return result;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -128,14 +120,80 @@ function strtoab(str){
   return binaryArray.buffer;
 };
 
-
 /**
- * main   The main function which runs the serialization of the model
+ * onnx_main   The main function which runs the serialization of the model
+ * 
  *        into a script.
  *
  * @returns {undefined}
  */
-async function main(){
+async function onnx_main(){
+  const modelPath = argv.m;
+  const outputPath = argv.o;
+  const dcpify     = argv.d;
+
+  const modelBinary = fs.readFileSync(modelPath);
+
+  let modelStr = abtostr(modelBinary.buffer);
+  
+  let modelSerial = JSON.stringify(modelStr);
+  let _atobSTRING   = _atob.toString();
+  let strtoabSTRING = strtoab.toString(); 
+
+  let outString =`\n`;
+ 
+  outString    +=`let modelSerial = \`${modelSerial}\`;\n\n`;
+  outString    +=`\n${_atobSTRING}\n\n`;
+  outString    +=`\n${strtoabSTRING}\n\n`;
+  outString    +=`async function getModel(){
+  let modelStr = JSON.parse(modelSerial);
+  const modelBinary = strtoab(modelStr);
+  return modelBinary;
+};\n\n`;
+
+  outString    +=`exports.getModel = getModel;\n\n`;
+  
+  if (argv.d){
+    outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare([], function(require, exports, module) {\n` + outString;
+    outString+= `});//this concludes module definition\n`;
+
+    let tempFileName = require('crypto').randomBytes(64).toString('hex') + '.js';
+    let tempFilePath = '/tmp/' + tempFileName;
+
+    fs.writeFileSync(tempFilePath, outString);
+    let pkgInfo = outputPath.split('/');
+    assert(pkgInfo.length < 3);
+    let packageName = pkgInfo[0];
+    let packageFile = pkgInfo[1];
+   
+    let pkg = {
+      name: `${packageName}`,
+      version: argv.p,
+      files: {}
+    };
+
+    pkg.files[tempFilePath] = packageFile; 
+
+    await require('dcp/publish').publish(Object.assign({}, pkg));
+    console.log("Module published at : ", pkg.name + '/' + pkg.files[tempFilePath]);
+    fs.unlinkSync(tempFilePath);  
+  }else{
+    fs.writeFileSync(outputPath, outString,'utf8');
+  };
+};
+
+
+
+
+
+
+/**
+ * tf_main   The main function which runs the serialization of the model
+ *        into a script.
+ *
+ * @returns {undefined}
+ */
+async function tf_main(){
   const modelPath = argv.m;
   const outputPath = argv.o;
   const dcpify     = argv.d;
@@ -144,14 +202,16 @@ async function main(){
 
   modelArtifacts.weightData = abtostr(modelArtifacts.weightData);
   
-  const modelSerial = JSON.stringify(modelArtifacts);
+  let modelSerial = JSON.stringify(modelArtifacts);
   let _atobSTRING   = _atob.toString();
-  let strtoabSTRING = strtoab.toString();
+  let strtoabSTRING = strtoab.toString(); 
+
   let outString =`let tf = require('@tensorflow/tfjs');\n`;
   if (argv.d){
     outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
   }
-  outString    +=`let modelSerial = \`${modelSerial}\`;\n\n`;
+  
+  outString  +=`let modelSerial = \`${modelSerial}\`;\n\n`;
   outString    +=`\n${_atobSTRING}\n\n`;
   outString    +=`\n${strtoabSTRING}\n\n`;
   outString    +=`async function getModel(){
@@ -203,5 +263,8 @@ async function main(){
   };
 };
 
-
-main().then(()=>{console.log("Done")}).catch((err)=>{console.error(err)});
+if (argv.x){
+  onnx_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
+}else{
+  tf_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
+}

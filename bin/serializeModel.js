@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
@@ -131,7 +132,7 @@ async function onnx_main(){
   const outputPath = argv.o;
   const dcpify     = argv.d;
 
-  const modelBinary = fs.readFileSync(m);
+  const modelBinary = fs.readFileSync(modelPath);
 
   let modelStr = abtostr(modelBinary.buffer);
   

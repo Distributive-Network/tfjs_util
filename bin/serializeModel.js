@@ -9,6 +9,7 @@ const tf = require('@tensorflow/tfjs');
 const btoa = require('btoa');
 require('dcp-client').initSync(process.argv);
 const dcpCli = require('dcp/dcp-cli');
+const { model } = require('@tensorflow/tfjs');
 
 const argv = dcpCli.base([
   '\x1b[33mThis application serializes tfjs model.json\'s into files which can be used in a dcp environment. It is also able to upload it to a DCP package manager.\x1b[37m'
@@ -45,6 +46,12 @@ const argv = dcpCli.base([
       default: false,
       alias: 'x'
     },
+    shard: {
+      describe: 'Shard model? If true dcpify is assumed true.',
+      type: 'boolean',
+      default: false,
+      alias: 's'
+    }
   }).argv;
 
 
@@ -183,6 +190,150 @@ async function onnx_main(){
 };
 
 
+async function shard(str){
+  let out_arr = [];
+  for (let i=0; i < Math.ceil( str.length / 1e+7 ); i++){
+    out_arr.push(
+      str.slice((i*1e7), (i+1)*1e7 )
+    );
+  }
+  return out_arr;
+}
+
+
+async function publish_shard( ind, str, outputPath ){
+  let outString =`const shard_data=\`${str}\`;\n`;
+
+  outString += `\n\nexports.data = shard_data;`;
+
+  outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare([], function(require, exports, module) {\n\n` + outString;
+  outString+= `});//this concludes module definition\n`;
+
+  let tempFileName = require('crypto').randomBytes(64).toString('hex') + '.js';
+  let tempFilePath = '/tmp/' + tempFileName;
+
+  fs.writeFileSync(tempFilePath, outString);
+  let pkgInfo = outputPath.split('/');
+  assert(pkgInfo.length < 3);
+  let packageName = pkgInfo[0]+'_'+ind.toString();
+  let packageFile = 'data.js';
+  
+  let pkg = {
+    name: `${packageName}`,
+    version: argv.p,
+    files: {}
+  };
+
+  pkg.files[tempFilePath] = packageFile; 
+
+  await require('dcp/publish').publish(Object.assign({}, pkg));
+  console.log("Module published at : ", pkg.name + '/' + pkg.files[tempFilePath]);
+  fs.unlinkSync(tempFilePath);
+}
+
+async function lazy_loader(paths){
+  await new Promise((resolve, reject)=>{
+    try{
+      module.provide( paths, ()=>{
+        resolve();
+      })
+    }catch(err){
+      console.log("Unable to load modules. Error:", err);
+      reject(error);
+    }
+  });
+}
+
+
+
+async function tf_main_sharded(){  
+  const modelPath = argv.m;
+  const outputPath = argv.o;
+  const dcpify     = argv.d;
+
+  let pkgInfo = outputPath.split('/');
+  assert(pkgInfo.length < 3);
+  let packageName = pkgInfo[0];
+  let packageFile = pkgInfo[1];
+
+  const modelArtifacts = await tfn.io.fileSystem(modelPath).load();
+
+  modelArtifacts.weightData = abtostr(modelArtifacts.weightData);
+  
+  let modelSerial = JSON.stringify(modelArtifacts);
+  let _atobSTRING   = _atob.toString();
+  let strtoabSTRING = strtoab.toString(); 
+  let lazyloaderSTRING = lazy_loader.toString();
+
+  let outString =`let tf = require('@tensorflow/tfjs');\n`;
+  if (argv.d){
+    outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
+  }
+
+  outString += `\n\n` + lazyloaderSTRING + `\n\n`;
+
+  let modelSerialShards = await shard(modelSerial);
+  outString += `\nlet dataPaths = [];\n`;
+
+  for (let ind=0; ind < modelSerialShards.length; ind++){
+    console.log("Publishing shard ", ind+1);
+    await publish_shard(ind+1, modelSerialShards[ind], outputPath);
+
+    outString += `\ndataPaths.push(\`` +  pkgInfo[0]+'_'+ (ind+1).toString() + '/data.js\`);';
+  }
+
+  outString    +=`\n\n\n${_atobSTRING}\n\n`;
+  outString    +=`\n${strtoabSTRING}\n\n`;
+  outString    +=`
+async function getModel(){
+  
+  let modelSerial = '';
+  await lazy_loader(dataPaths);
+  for (let i=0; i<dataPaths.length;i++){
+    modelSerial += require(dataPaths[i]).data;
+  }
+
+
+  let modelArtifacts = JSON.parse(modelSerial);
+  const weightData = strtoab(modelArtifacts.weightData);
+  modelArtifacts.weightData = weightData;
+
+  var model;
+  try{
+    model = await tf.loadLayersModel( tf.io.fromMemory(modelArtifacts) );
+  }catch(err1){
+    try{
+      model = await tf.loadGraphModel( tf.io.fromMemory(modelArtifacts) );
+    }catch(err2){
+      throw err1 + err2;
+    };
+  };
+  return model;
+};\n\n`;
+
+  outString    +=`exports.getModel = getModel;\n\n`;
+  
+  outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['aistensorflow/tfjs'], function(require, exports, module) {\n` + outString;
+  outString+= `});//this concludes module definition\n`;
+
+  let tempFileName = require('crypto').randomBytes(64).toString('hex') + '.js';
+  let tempFilePath = '/tmp/' + tempFileName;
+
+  fs.writeFileSync(tempFilePath, outString);
+  
+  let pkg = {
+    name: `${packageName}`,
+    version: argv.p,
+    files: {}
+  };
+
+  pkg.files[tempFilePath] = packageFile; 
+
+  await require('dcp/publish').publish(Object.assign({}, pkg));
+  console.log("Module published at : ", pkg.name + '/' + pkg.files[tempFilePath]);
+  fs.unlinkSync(tempFilePath);  
+}
+
 
 
 
@@ -266,5 +417,9 @@ async function tf_main(){
 if (argv.x){
   onnx_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
 }else{
-  tf_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
+  if (argv.s){
+    tf_main_sharded().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
+  }else{
+    tf_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
+  }
 }

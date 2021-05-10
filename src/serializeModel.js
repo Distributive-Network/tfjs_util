@@ -286,10 +286,7 @@ async function tf_main_sharded(){
   let strtoabSTRING = strtoab.toString(); 
   let lazyloaderSTRING = lazy_loader.toString();
 
-  let outString =`let tf = require('@tensorflow/tfjs');\n`;
-  if (argv.d){
-    outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
-  }
+  let outString =`let tf = require('tfjs');\n`;
 
   outString += `\n\n` + lazyloaderSTRING + `\n\n`;
 

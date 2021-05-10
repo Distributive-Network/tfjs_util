@@ -200,7 +200,14 @@ async function shard(str){
   return out_arr;
 }
 
-
+/**
+ * 
+ * Publish a string as full dcp package.
+ * 
+ * @param {Number} ind index of string chunk
+ * @param {String} str String chunk
+ * @param {String} outputPath outputPath given by the user
+ */
 async function publish_shard( ind, str, outputPath ){
   let outString =`const shard_data=\`${str}\`;\n`;
 
@@ -231,6 +238,12 @@ async function publish_shard( ind, str, outputPath ){
   fs.unlinkSync(tempFilePath);
 }
 
+/**
+ * 
+ * Lazy load dcp-packages from inside a worker.
+ * 
+ * @param {String[]} paths An array of strings corresponding to dcp packages
+ */
 async function lazy_loader(paths){
   await new Promise((resolve, reject)=>{
     try{
@@ -245,7 +258,15 @@ async function lazy_loader(paths){
 }
 
 
-
+/**
+ * This is the tensorflow main publishing script for sharded models.
+ * This will read and serialize the model. Then will split the model 
+ * into 1e7 chunks of characters. Each chunk is uploaded as module
+ * with a particular name.
+ * 
+ * The main entry point (given by the user as PACKAGENAME/MODULE.js)
+ * will load in (lazily) all of the chunks and reconstruct the model.
+ */
 async function tf_main_sharded(){  
   const modelPath = argv.m;
   const outputPath = argv.o;

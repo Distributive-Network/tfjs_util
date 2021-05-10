@@ -26,3 +26,24 @@ For large models, (any model larger than 60MB) can be uploaded using the shardin
 ./bin/serializeModel.js -m $INPUT_MODEL.json -o $MODULENAME/$FILENAME -p 1.0.0 -d -s
 ```
 
+## Using the module
+
+Once uploaded, here is how you'll require your model:
+
+```js
+
+let job = compute.for(INPUT_SET, async function(){
+    let tf = require('tfjs');
+
+    let { getModel } = require($FILENAME);
+
+    let model = await getModel();
+
+    ...
+});
+
+job.requires('aistensorflow/tfjs');
+job.requires('$MODULENAME/$FILENAME');
+
+...
+```

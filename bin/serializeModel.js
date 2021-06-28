@@ -8,7 +8,7 @@ const tfn = require('@tensorflow/tfjs-node');
 const tf = require('@tensorflow/tfjs');
 const btoa = require('btoa');
 require('dcp-client').initSync(process.argv);
-const dcpCli = require('dcp/dcp-cli');
+const dcpCli = require('dcp/cli');
 const { model } = require('@tensorflow/tfjs');
 
 const argv = dcpCli.base([
@@ -135,9 +135,9 @@ function strtoab(str){
  * @returns {undefined}
  */
 async function onnx_main(){
-  const modelPath = argv.m;
-  const outputPath = argv.o;
-  const dcpify     = argv.d;
+  const modelPath = argv.model;
+  const outputPath = argv.output;
+  const dcpify     = argv.dcpify;
 
   const modelBinary = fs.readFileSync(modelPath);
 
@@ -160,7 +160,7 @@ async function onnx_main(){
 
   outString    +=`exports.getModel = getModel;\n\n`;
   
-  if (argv.d){
+  if (argv.dcpify){
     outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare([], function(require, exports, module) {\n` + outString;
     outString+= `});//this concludes module definition\n`;
 
@@ -175,7 +175,7 @@ async function onnx_main(){
    
     let pkg = {
       name: `${packageName}`,
-      version: argv.p,
+      version: argv.packageVersion,
       files: {}
     };
 
@@ -227,7 +227,7 @@ async function publish_shard( ind, str, outputPath ){
   
   let pkg = {
     name: `${packageName}`,
-    version: argv.p,
+    version: argv.packageVersion,
     files: {}
   };
 
@@ -268,14 +268,15 @@ async function lazy_loader(paths){
  * will load in (lazily) all of the chunks and reconstruct the model.
  */
 async function tf_main_sharded(){  
-  const modelPath = argv.m;
-  const outputPath = argv.o;
-  const dcpify     = argv.d;
+  const modelPath = argv.model;
+  const outputPath = argv.output;
+  const dcpify     = argv.dcpify;
 
   let pkgInfo = outputPath.split('/');
   assert(pkgInfo.length < 3);
   let packageName = pkgInfo[0];
   let packageFile = pkgInfo[1];
+
 
   const modelArtifacts = await tfn.io.fileSystem(modelPath).load();
 
@@ -287,7 +288,7 @@ async function tf_main_sharded(){
   let lazyloaderSTRING = lazy_loader.toString();
 
   let outString =`let tf = require('@tensorflow/tfjs');\n`;
-  if (argv.d){
+  if (argv.dcpify){
     outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
   }
 
@@ -344,7 +345,7 @@ async function getModel(){
   
   let pkg = {
     name: `${packageName}`,
-    version: argv.p,
+    version: argv.packageVersion,
     files: {}
   };
 
@@ -366,9 +367,9 @@ async function getModel(){
  * @returns {undefined}
  */
 async function tf_main(){
-  const modelPath = argv.m;
-  const outputPath = argv.o;
-  const dcpify     = argv.d;
+  const modelPath = argv.model;
+  const outputPath = argv.output;
+  const dcpify     = argv.dcpify;
 
   const modelArtifacts = await tfn.io.fileSystem(modelPath).load();
 
@@ -379,7 +380,7 @@ async function tf_main(){
   let strtoabSTRING = strtoab.toString(); 
 
   let outString =`let tf = require('@tensorflow/tfjs');\n`;
-  if (argv.d){
+  if (argv.dcpify){
     outString =`let tf = require('tfjs');\n`; //on dcp, we get it by the filename 'tfjs'
   }
   
@@ -406,7 +407,7 @@ async function tf_main(){
 
   outString    +=`exports.getModel = getModel;\n\n`;
   
-  if (argv.d){
+  if (argv.dcpify){
     outString = `//This module was created by the tfjs_util library from AITF\nmodule.declare(['aistensorflow/tfjs'], function(require, exports, module) {\n` + outString;
     outString+= `});//this concludes module definition\n`;
 
@@ -421,7 +422,7 @@ async function tf_main(){
    
     let pkg = {
       name: `${packageName}`,
-      version: argv.p,
+      version: argv.packageVersion,
       files: {}
     };
 
@@ -435,10 +436,10 @@ async function tf_main(){
   };
 };
 
-if (argv.x){
+if (argv.onnx){
   onnx_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
 }else{
-  if (argv.s){
+  if (argv.shard){
     tf_main_sharded().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
   }else{
     tf_main().then(()=>{console.log("Done!")}).catch((err)=>console.error(err));
